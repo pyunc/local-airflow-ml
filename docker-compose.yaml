@@ -1,0 +1,31 @@
+# Simplified Airflow for Local Development
+# Uses Simple Auth Manager with admin/admin credentials
+
+services:
+  airflow-standalone:
+    image: apache/airflow:3.1.5
+    container_name: airflow-standalone
+    user: "50000:984"  # Run as airflow user (UID 50000) with docker group (GID 984)
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__CORE__LOAD_EXAMPLES=false
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=true
+      - AIRFLOW__AUTH__BACKEND=airflow.auth.managers.simple.simple_auth_manager.SimpleAuthManager
+      - AIRFLOW__AUTH__SIMPLE__ADMIN_USERNAME=admin
+      - AIRFLOW__AUTH__SIMPLE__ADMIN_PASSWORD=airflow
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+      - ./config:/opt/airflow/config
+      - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket for DockerOperator
+    command: standalone
+    healthcheck:
+      test: ["CMD-SHELL", "[ -f /opt/airflow/airflow-webserver.pid ]"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
